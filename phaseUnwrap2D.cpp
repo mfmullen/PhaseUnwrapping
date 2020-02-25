@@ -273,7 +273,7 @@ void unwrap(long int numRows,long int numCols,double *inputArray,
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-    //Ignoring the mwSize and such, class C++ types seem more stable. 
+    //Ignoring the mwSize and such, classic C++ types seem more stable. 
     if (nlhs != 1){
         mexErrMsgTxt("ERROR:  Number of outputs must equal 1 \n");
     }
