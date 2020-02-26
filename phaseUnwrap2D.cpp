@@ -231,32 +231,7 @@ void unwrap(long int numRows,long int numCols,double *inputArray,
             }
                         
             //Merge the two groups by having last index of first group go to first index of second group
-            currentFirst = groupArray[(currentRow)*numCols + currentCol].firstIndex;
-            currentLast = groupArray[(currentRow)*numCols + currentCol].lastIndex;
             
-
-            nextLast = groupArray[adjIndex].lastIndex;
-            nextFirst = groupArray[adjIndex].firstIndex;
-                    
-            groupArray[currentLast].nextIndex = nextFirst;
-            groupArray[currentFirst].lastIndex = nextLast;
-            
-            next = groupArray[currentFirst].nextIndex;
-            //next = -1 indicates end of group
-            //Loop over all of group and add correct phase to adjGroup
-            while (next != -1){
-                
-                if(groupArray[next].group == adjGroup){
-                     unwrappedImage[next] = unwrappedImage[next] + jumpDirection*2*M_PI*numberOfJumps;
-                }
-                
-                groupArray[next].firstIndex = currentFirst;
-                groupArray[next].group = currentGroup;
-                groupArray[next].lastIndex = nextLast;
-                
-                next = groupArray[next].nextIndex;
-            
-            }
               
         }
         
