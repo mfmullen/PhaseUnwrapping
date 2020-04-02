@@ -146,23 +146,23 @@ void unwrap(long int numRows,long int numCols,double *inputArray,
             if(rowIndex != 0 && rowIndex != numRows - 1 && colIndex != 0 && colIndex != numCols - 1){
             H = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex]);
             
             V = pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex + 1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex+1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex)*numCols + colIndex+1]);
             
             D1 = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex-1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex+1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex+1]);
             
             D2 = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex+1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex-1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex-1]);
             
             D = sqrt(H*H + V*V + D1*D1 + D2*D2);
             Reliability[index] = 1/D;
