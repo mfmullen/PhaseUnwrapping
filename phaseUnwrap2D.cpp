@@ -103,23 +103,23 @@ void unwrap(long int numRows,long int numCols,double *inputArray,
             if(rowIndex != 0 && rowIndex != numRows - 1 && colIndex != 0 && colIndex != numCols - 1){
             H = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex]);
             
             V = pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex + 1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex+1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex)*numCols + colIndex+1]);
             
             D1 = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex-1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex+1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex+1]);
             
             D2 = pairwiseUnwrap(unwrappedImage[(rowIndex-1)*numCols + colIndex+1],
                     unwrappedImage[(rowIndex)*numCols + colIndex])-
-                    pairwiseUnwrap(unwrappedImage[(rowIndex+1)*numCols + colIndex-1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]);
+                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
+                    unwrappedImage[(rowIndex+1)*numCols + colIndex-1]);
             
             D = sqrt(H*H + V*V + D1*D1 + D2*D2);
             Reliability[index] = 1/D;
@@ -231,7 +231,32 @@ void unwrap(long int numRows,long int numCols,double *inputArray,
             }
                         
             //Merge the two groups by having last index of first group go to first index of second group
-            
+            currentFirst = groupArray[(currentRow)*numCols + currentCol].firstIndex;
+            currentLast = groupArray[(currentRow)*numCols + currentCol].lastIndex;
+
+
+            nextLast = groupArray[adjIndex].lastIndex;
+            nextFirst = groupArray[adjIndex].firstIndex;
+
+            groupArray[currentLast].nextIndex = nextFirst;
+            groupArray[currentFirst].lastIndex = nextLast;
+
+            next = groupArray[currentFirst].nextIndex;
+            //next = -1 indicates end of group
+            //Loop over all of group and add correct phase to adjGroup
+            while (next != -1) {
+
+                if (groupArray[next].group == adjGroup) {
+                    unwrappedImage[next] = unwrappedImage[next] + jumpDirection * 2 * M_PI * numberOfJumps;
+                }
+
+                groupArray[next].firstIndex = currentFirst;
+                groupArray[next].group = currentGroup;
+                groupArray[next].lastIndex = nextLast;
+
+                next = groupArray[next].nextIndex;
+
+            }
               
         }
         
@@ -262,12 +287,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     double *inputArray;             /*Input phase image*/
     double *unwrappedImage;         /*output array, unwrapped*/
-    mwSize numRows;
-    mwSize numCols;
+    long int numRows;
+    long int numCols;
     
     inputArray = mxGetPr(prhs[0]);
-    numCols = mxGetM(prhs[0]);
-    numRows = mxGetN(prhs[0]);
+    numCols = (long int)mxGetM(prhs[0]);
+    numRows = (long int)mxGetN(prhs[0]);
     
     /* ===== Allocate output array, note transposed size. 
      *       since Matlab uses column major, C uses row major.           */
