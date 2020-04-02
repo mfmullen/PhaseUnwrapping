@@ -262,12 +262,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     double *inputArray;             /*Input phase image*/
     double *unwrappedImage;         /*output array, unwrapped*/
-    long int numRows;
-    long int numCols;
+    mwSize numRows;
+    mwSize numCols;
     
     inputArray = mxGetPr(prhs[0]);
-    numCols = (long int)mxGetM(prhs[0]);
-    numRows = (long int)mxGetN(prhs[0]);
+    numCols = mxGetM(prhs[0]);
+    numRows = mxGetN(prhs[0]);
     
     /* ===== Allocate output array, note transposed size. 
      *       since Matlab uses column major, C uses row major.           */
