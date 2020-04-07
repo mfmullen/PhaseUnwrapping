@@ -157,6 +157,8 @@ void calcReliability(vector<double>& Reliability, const double* unwrappedImage, 
     }
 }
 
+//Need to clean up this function. This is the main calculation though. 
+//Compares groups and unwraps them relative to each other.
 void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInfo>& edges, 
     vector <pixelGroup>& groupArray, const long int numCols, const long int numRows) {
 
@@ -265,25 +267,13 @@ void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInf
 void unwrap(const long int numRows, const long int numCols, const double* inputArray,
         double* unwrappedImage)
 {
-    //multimap<double,double> myMap;
     long int numGroups = 2*numRows*numCols - numRows - numCols; //Number of edges
     vector<edgeInfo> edges(numGroups);
     vector<double> Reliability(numRows * numCols);
     vector <pixelGroup> groupArray(numRows * numCols);
     
     long int size = numRows * numCols * sizeof(double);
-    long int currentRow,currentCol;
-    long int group,adjIndex;
-    long int currentGroup,adjGroup,next,nextLast,nextFirst,currentFirst,currentLast;
-    char edge;
-    long int rowIndex, colIndex;
-    long int iters = 0;
-    
-    double phase1,phase2;
-    
-    long int jumpDirection = 0, numberOfJumps = 0;
-    long int index,sortedIndex,count = 0;
-    
+
     memcpy(unwrappedImage,inputArray,size);
     
     //Defining reliability, using convention of paper mentioned in header
@@ -305,12 +295,9 @@ void unwrap(const long int numRows, const long int numCols, const double* inputA
 }
 
 
-
 //==========================================================================
 //                          MEX FUNCTION HERE                            
 //==========================================================================
-
-
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     //Ignoring the mwSize and such, classic C++ types seem more stable. 
