@@ -72,6 +72,44 @@ struct pixelGroup {
     long int lastIndex;
 };
 
+//calculate reliability of each edge.
+void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const long int numRows, 
+    const long int numCols, const vector<double>& Reliability){
+    long int colIndex, rowIndex, count = 0;
+    double rowEdge, columnEdge;
+
+    for (long int index = 0; index < numRows * numCols; index++) {
+        colIndex = index % numCols;
+        rowIndex = (index - colIndex) / numCols;
+
+        if (rowIndex < numRows - 1) {
+            rowEdge = Reliability[(rowIndex)*numCols + colIndex]
+                + Reliability[(rowIndex + 1) * numCols + colIndex];
+            edges[count].edgeType = 'r';
+            edges[count].R = rowEdge;
+            edges[count].row = rowIndex;
+            edges[count].column = colIndex;
+
+            ++count;
+        }
+
+        if (colIndex < numCols - 1) {
+            columnEdge = Reliability[(rowIndex)*numCols + colIndex]
+                + Reliability[(rowIndex)*numCols + colIndex + 1];
+            edges[count].edgeType = 'c';
+            edges[count].R = columnEdge;
+            edges[count].row = rowIndex;
+            edges[count].column = colIndex;
+
+            ++count;
+        }
+        groupArray[(rowIndex)*numCols + colIndex].group = (rowIndex)*numCols + colIndex;
+        groupArray[(rowIndex)*numCols + colIndex].nextIndex = -1;
+        groupArray[(rowIndex)*numCols + colIndex].lastIndex = (rowIndex)*numCols + colIndex;
+        groupArray[(rowIndex)*numCols + colIndex].firstIndex = (rowIndex)*numCols + colIndex;
+    }
+}
+
 //Reliability calculation
 //Calculated finite differences in phase across all non-border pixels
 //Includes diagonal phase differences
@@ -119,19 +157,119 @@ void calcReliability(vector<double>& Reliability, const double* unwrappedImage, 
     }
 }
 
+void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInfo>& edges, 
+    vector <pixelGroup>& groupArray, const long int numCols, const long int numRows) {
+
+    long int adjGroup, adjIndex, currentCol, currentRow, currentGroup;
+    long int iters, numberOfJumps, jumpDirection, currentFirst, currentLast, nextFirst, nextLast;
+    long int nextPixel;
+
+    char edge;
+    double phase1, phase2;
+    
+    for (long int sortedIndex = 0; sortedIndex < numGroups; sortedIndex++) {
+
+        //Retrieve parameters about the current edge type and its location
+        currentRow = edges[sortedIndex].row;
+        currentCol = edges[sortedIndex].column;
+        currentGroup = groupArray[(currentRow)*numCols + currentCol].group;
+        edge = edges[sortedIndex].edgeType;
+
+        //Calculate index of adjacent pixel
+        if (edge == 'r') {
+            adjIndex = (currentRow + 1) * numCols + currentCol;
+        }
+        else {
+            adjIndex = (currentRow)*numCols + currentCol + 1;
+        }
+
+        //group of adjacent pixel
+        adjGroup = groupArray[adjIndex].group;
+        //current phase of adjacent pixel
+        phase1 = unwrappedImage[adjIndex];
+        //current phase of current pixel
+        phase2 = unwrappedImage[currentRow * numCols + currentCol];
+
+        //its is used in a while loop for phase unwrapping
+        iters = 0;
+        //m is the number of 2pi jumps
+        numberOfJumps = 0;
+        //jumpDirection indicates the direction of the 2 pi jumps (+1 or -1)
+        jumpDirection = 0;
+        //Only need to unwrap if the two different pixels are in different groups
+        if (adjGroup != currentGroup) {
+
+            //First condition is definition of a phase discontinuity and second condition just makes sure we don't get stuck in an infinite loop
+            while (fabs(phase1 - phase2) > M_PI && iters < 100) {
+
+                //if phase needs to decrement by 2pi
+                if (phase1 > phase2 + M_PI) {
+                    phase1 = phase1 - 2 * M_PI;
+                    jumpDirection = -1;
+                    ++numberOfJumps; //increment jump counter
+                }
+                //if phase needs to increment by 2pi
+                else if (phase1 < phase2 - M_PI) {
+                    phase1 = phase1 + 2 * M_PI;
+                    jumpDirection = 1;
+                    ++numberOfJumps;
+                }
+
+                //if phase is just right
+                else {
+                    break;
+                }
+
+                //Increase iteration count
+                ++iters;
+
+            }
+
+            //Merge the two groups by having last index of first group go to first index of second group
+            //Merge using multimaps?
+            currentFirst = groupArray[(currentRow)*numCols + currentCol].firstIndex;
+            currentLast = groupArray[(currentRow)*numCols + currentCol].lastIndex;
+
+
+            nextLast = groupArray[adjIndex].lastIndex;
+            nextFirst = groupArray[adjIndex].firstIndex;
+
+            groupArray[currentLast].nextIndex = nextFirst;
+            groupArray[currentFirst].lastIndex = nextLast;
+
+            nextPixel = groupArray[currentFirst].nextIndex;
+            //next = -1 indicates end of group
+            //Loop over all of group and add correct phase to adjGroup
+            while (nextPixel != -1) {
+
+                if (groupArray[nextPixel].group == adjGroup) {
+                    unwrappedImage[nextPixel] = unwrappedImage[nextPixel] + jumpDirection * 2 * M_PI * numberOfJumps;
+                }
+
+                groupArray[nextPixel].firstIndex = currentFirst;
+                groupArray[nextPixel].group = currentGroup;
+                groupArray[nextPixel].lastIndex = nextLast;
+
+                nextPixel = groupArray[nextPixel].nextIndex;
+
+            }
+
+        }
+    }
+}
+
+
 //========================================================================
 //                         UNWRAPPER                                    
 //========================================================================
 void unwrap(const long int numRows, const long int numCols, const double* inputArray,
         double* unwrappedImage)
 {
+    //multimap<double,double> myMap;
     long int numGroups = 2*numRows*numCols - numRows - numCols; //Number of edges
     vector<edgeInfo> edges(numGroups);
     vector<double> Reliability(numRows * numCols);
     vector <pixelGroup> groupArray(numRows * numCols);
-
-    double columnEdge;
-    double rowEdge;
     
     long int size = numRows * numCols * sizeof(double);
     long int currentRow,currentCol;
@@ -154,137 +292,15 @@ void unwrap(const long int numRows, const long int numCols, const double* inputA
     
     //Define reliability of edges and store in struct edges
     //Do in a separate function
-    for (index = 0; index < numRows * numCols; index++){
-        colIndex = index % numCols;
-        rowIndex = (index-colIndex)/numCols;
-        
-        if (rowIndex < numRows - 1){
-            rowEdge = Reliability[(rowIndex)*numCols + colIndex]
-                    + Reliability[(rowIndex+1)*numCols + colIndex];
-            edges[count].edgeType = 'r';
-            edges[count].R = rowEdge;
-            edges[count].row = rowIndex;
-            edges[count].column = colIndex;
-            
-            ++count;
-        }
-        
-        if (colIndex < numCols - 1){
-            columnEdge = Reliability[(rowIndex)*numCols + colIndex]
-                    + Reliability[(rowIndex)*numCols + colIndex+1];
-            edges[count].edgeType = 'c';
-            edges[count].R = columnEdge;
-            edges[count].row = rowIndex;
-            edges[count].column = colIndex;
-            
-            ++count;
-        }
-        groupArray[(rowIndex)*numCols + colIndex].group = (rowIndex)*numCols + colIndex;
-        groupArray[(rowIndex)*numCols + colIndex].nextIndex = -1;
-        groupArray[(rowIndex)*numCols + colIndex].lastIndex = (rowIndex)*numCols + colIndex;
-        groupArray[(rowIndex)*numCols + colIndex].firstIndex = (rowIndex)*numCols + colIndex;
-
-
-    }
-    
-    //multimap<double,double> myMap;
-    
+    calcEdges(groupArray, edges, numRows, numCols, Reliability);
+   
     //====================== SORT EDGES HERE ==================
     std::sort(edges.begin(), edges.end());
     //========================================================
 
-     //Do the unwrapping by looping over the groups
+    //Do the unwrapping by looping over the groups
     //Export these tasks to a separate function
-    for (sortedIndex = 0; sortedIndex < numGroups; sortedIndex++){
-        
-        //Retrieve parameters about the current edge type and its location
-        currentRow = edges[sortedIndex].row;
-        currentCol = edges[sortedIndex].column;
-        currentGroup = groupArray[(currentRow)*numCols + currentCol].group;
-        edge = edges[sortedIndex].edgeType;
-        
-        //Calculate index of adjacent pixel
-        if (edge == 'r'){
-            adjIndex = (currentRow+1)*numCols + currentCol;
-        }
-        else{
-            adjIndex = (currentRow)*numCols + currentCol + 1;
-        }
-        
-        //group of adjacent pixel
-        adjGroup = groupArray[adjIndex].group;
-        //current phase of adjacent pixel
-        phase1 = unwrappedImage[adjIndex];
-        //current phase of current pixel
-        phase2 = unwrappedImage[currentRow*numCols+currentCol];
-
-        //its is used in a while loop for phase unwrapping
-        iters = 0;
-        //m is the number of 2pi jumps
-        numberOfJumps = 0;
-        //jumpDirection indicates the direction of the 2 pi jumps (+1 or -1)
-        jumpDirection = 0;
-        //Only need to unwrap if the two different pixels are in different groups
-        if (adjGroup != currentGroup){
-            
-            //First condition is definition of a phase discontinuity and second condition just makes sure we don't get stuck in an infinite loop
-            while (fabs(phase1 - phase2) > M_PI && iters < 100){   
-
-                //if phase needs to decrement by 2pi
-                if(phase1 > phase2+ M_PI){
-                    phase1 = phase1 - 2*M_PI;
-                    jumpDirection = -1;
-                    ++numberOfJumps; //increment jump counter
-                }
-                //if phase needs to increment by 2pi
-                else if(phase1 < phase2- M_PI){
-                    phase1 = phase1 + 2*M_PI;
-                    jumpDirection = 1;
-                    ++numberOfJumps;
-                }
-
-                //if phase is just right
-                else{
-                    break;
-                }
-
-                //Increase iteration count
-                ++iters;
-                
-            }
-                        
-            //Merge the two groups by having last index of first group go to first index of second group
-            //Merge using multimaps?
-            currentFirst = groupArray[(currentRow)*numCols + currentCol].firstIndex;
-            currentLast = groupArray[(currentRow)*numCols + currentCol].lastIndex;
-
-
-            nextLast = groupArray[adjIndex].lastIndex;
-            nextFirst = groupArray[adjIndex].firstIndex;
-
-            groupArray[currentLast].nextIndex = nextFirst;
-            groupArray[currentFirst].lastIndex = nextLast;
-
-            next = groupArray[currentFirst].nextIndex;
-            //next = -1 indicates end of group
-            //Loop over all of group and add correct phase to adjGroup
-            while (next != -1) {
-
-                if (groupArray[next].group == adjGroup) {
-                    unwrappedImage[next] = unwrappedImage[next] + jumpDirection * 2 * M_PI * numberOfJumps;
-                }
-
-                groupArray[next].firstIndex = currentFirst;
-                groupArray[next].group = currentGroup;
-                groupArray[next].lastIndex = nextLast;
-
-                next = groupArray[next].nextIndex;
-
-            }
-              
-        }
-        
-    }
+    calcUnwrap(unwrappedImage, numGroups, edges, groupArray, numCols, numRows);
     
 }
 
