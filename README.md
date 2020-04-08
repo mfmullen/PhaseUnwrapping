@@ -1,10 +1,15 @@
 # PhaseUnwrapping
-2D phase unwrapping plugin for Matlab
+2D&3D phase unwrapping plugin for Matlab
 
-To compile in Matlab, type
+To compile the 2D unwrapper only in Matlab, type
 mex phaseUnwrap2D.cpp
+
+To compile the 2D/3D unwrapper, use
+mex phaseUnwrap
 
 then for a given wrapped (double) phase image, type
 unwrapped = phaseUnwrap2D(wrapped); 
+OR
+unwrapped = phaseUnwrap(wrapped);
 
 to get the unwrapped image.
