@@ -108,10 +108,10 @@ void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const l
 
             ++count;
         }
-        groupArray[(rowIndex)*numCols + colIndex].group = get2Dindex(rowIndex, colIndex, numCols);
-        groupArray[(rowIndex)*numCols + colIndex].nextIndex = -1;
-        groupArray[(rowIndex)*numCols + colIndex].lastIndex = get2Dindex(rowIndex, colIndex, numCols);
-        groupArray[(rowIndex)*numCols + colIndex].firstIndex = get2Dindex(rowIndex, colIndex, numCols);
+        groupArray[get2Dindex(rowIndex, colIndex, numCols)].group = get2Dindex(rowIndex, colIndex, numCols);
+        groupArray[get2Dindex(rowIndex, colIndex, numCols)].nextIndex = -1;
+        groupArray[get2Dindex(rowIndex, colIndex, numCols)].lastIndex = get2Dindex(rowIndex, colIndex, numCols);
+        groupArray[get2Dindex(rowIndex, colIndex, numCols)].firstIndex = get2Dindex(rowIndex, colIndex, numCols);
     }
 }
 
@@ -276,11 +276,7 @@ void unwrap(const long int numRows, const long int numCols, const double* inputA
     vector<edgeInfo> edges(numGroups);
     vector<double> Reliability(numRows * numCols);
     vector <pixelGroup> groupArray(numRows * numCols);
-    
-    long int size = numRows * numCols * sizeof(double);
-
-    memcpy(unwrappedImage,inputArray,size);
-    
+        
     //Defining reliability, using convention of paper mentioned in header
     //replce with call to function that returns reliability
     calcReliability(Reliability,unwrappedImage, numRows, numCols);
@@ -332,7 +328,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     plhs[0] = mxCreateDoubleMatrix(numCols,numRows,mxREAL);
     unwrappedImage = mxGetPr(plhs[0]);
-    
+
+    //Initialize unwrappedImage with the input image
+    long int size = numRows * numCols * sizeof(double);
+    memcpy(unwrappedImage, inputArray, size);
+
     unwrap(numRows,numCols,inputArray,unwrappedImage);
     
 }
