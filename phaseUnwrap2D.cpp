@@ -72,6 +72,11 @@ struct pixelGroup {
     long int lastIndex;
 };
 
+//makes code a little clearer when grabbing indices.
+inline long int get2Dindex(const long int row, const long int col, const long int numCols) {
+    return col + (row)*numCols;
+}
+
 //calculate reliability of each edge.
 void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const long int numRows, 
     const long int numCols, const vector<double>& Reliability){
@@ -83,8 +88,8 @@ void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const l
         rowIndex = (index - colIndex) / numCols;
 
         if (rowIndex < numRows - 1) {
-            rowEdge = Reliability[(rowIndex)*numCols + colIndex]
-                + Reliability[(rowIndex + 1) * numCols + colIndex];
+            rowEdge = Reliability[get2Dindex(rowIndex, colIndex, numCols)]
+                + Reliability[get2Dindex(rowIndex+1, colIndex, numCols)];
             edges[count].edgeType = 'r';
             edges[count].R = rowEdge;
             edges[count].row = rowIndex;
@@ -94,8 +99,8 @@ void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const l
         }
 
         if (colIndex < numCols - 1) {
-            columnEdge = Reliability[(rowIndex)*numCols + colIndex]
-                + Reliability[(rowIndex)*numCols + colIndex + 1];
+            columnEdge = Reliability[get2Dindex(rowIndex, colIndex, numCols)]
+                + Reliability[get2Dindex(rowIndex, colIndex + 1, numCols)];
             edges[count].edgeType = 'c';
             edges[count].R = columnEdge;
             edges[count].row = rowIndex;
@@ -103,10 +108,10 @@ void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const l
 
             ++count;
         }
-        groupArray[(rowIndex)*numCols + colIndex].group = (rowIndex)*numCols + colIndex;
+        groupArray[(rowIndex)*numCols + colIndex].group = get2Dindex(rowIndex, colIndex, numCols);
         groupArray[(rowIndex)*numCols + colIndex].nextIndex = -1;
-        groupArray[(rowIndex)*numCols + colIndex].lastIndex = (rowIndex)*numCols + colIndex;
-        groupArray[(rowIndex)*numCols + colIndex].firstIndex = (rowIndex)*numCols + colIndex;
+        groupArray[(rowIndex)*numCols + colIndex].lastIndex = get2Dindex(rowIndex, colIndex, numCols);
+        groupArray[(rowIndex)*numCols + colIndex].firstIndex = get2Dindex(rowIndex, colIndex, numCols);
     }
 }
 
@@ -118,29 +123,30 @@ void calcReliability(vector<double>& Reliability, const double* unwrappedImage, 
     int colIndex, rowIndex;
 
     for (int index = 0; index < numRows * numCols; index++) {
+        //protect against out of range errors hopefully. Had some past issues in that regard.
         try {
             colIndex = index % numCols;
             rowIndex = (index - colIndex) / numCols;
             if (rowIndex != 0 && rowIndex != numRows - 1 && colIndex != 0 && colIndex != numCols - 1) {
-                H = pairwiseUnwrap(unwrappedImage[(rowIndex - 1) * numCols + colIndex],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]) -
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
-                        unwrappedImage[(rowIndex + 1) * numCols + colIndex]);
+                H = pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex-1, colIndex, numCols)],
+                    unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)]) -
+                    pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)],
+                        unwrappedImage[get2Dindex(rowIndex+1, colIndex, numCols)]);
 
-                V = pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex + 1],
+                V = pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex - 1],
                     unwrappedImage[(rowIndex)*numCols + colIndex]) -
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
-                        unwrappedImage[(rowIndex)*numCols + colIndex + 1]);
+                    pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)],
+                        unwrappedImage[get2Dindex(rowIndex, colIndex+1, numCols)]);
 
-                D1 = pairwiseUnwrap(unwrappedImage[(rowIndex - 1) * numCols + colIndex - 1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]) -
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
-                        unwrappedImage[(rowIndex + 1) * numCols + colIndex + 1]);
+                D1 = pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex-1, colIndex-1, numCols)],
+                    unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)]) -
+                    pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)],
+                        unwrappedImage[get2Dindex(rowIndex+1, colIndex+1, numCols)]);
 
-                D2 = pairwiseUnwrap(unwrappedImage[(rowIndex - 1) * numCols + colIndex + 1],
-                    unwrappedImage[(rowIndex)*numCols + colIndex]) -
-                    pairwiseUnwrap(unwrappedImage[(rowIndex)*numCols + colIndex],
-                        unwrappedImage[(rowIndex + 1) * numCols + colIndex - 1]);
+                D2 = pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex-1, colIndex+1, numCols)],
+                    unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)]) -
+                    pairwiseUnwrap(unwrappedImage[get2Dindex(rowIndex, colIndex, numCols)],
+                        unwrappedImage[get2Dindex(rowIndex+1, colIndex-1, numCols)]);
 
                 D = sqrt(H * H + V * V + D1 * D1 + D2 * D2);
                 Reliability[index] = 1 / D;
@@ -174,15 +180,15 @@ void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInf
         //Retrieve parameters about the current edge type and its location
         currentRow = edges[sortedIndex].row;
         currentCol = edges[sortedIndex].column;
-        currentGroup = groupArray[(currentRow)*numCols + currentCol].group;
+        currentGroup = groupArray[get2Dindex(currentRow, currentCol, numCols)].group;
         edge = edges[sortedIndex].edgeType;
 
         //Calculate index of adjacent pixel
         if (edge == 'r') {
-            adjIndex = (currentRow + 1) * numCols + currentCol;
+            adjIndex = get2Dindex(currentRow+1, currentCol, numCols);
         }
         else {
-            adjIndex = (currentRow)*numCols + currentCol + 1;
+            adjIndex = get2Dindex(currentRow, currentCol+1, numCols);
         }
 
         //group of adjacent pixel
@@ -190,7 +196,7 @@ void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInf
         //current phase of adjacent pixel
         phase1 = unwrappedImage[adjIndex];
         //current phase of current pixel
-        phase2 = unwrappedImage[currentRow * numCols + currentCol];
+        phase2 = unwrappedImage[get2Dindex(currentRow, currentCol, numCols)];
 
         //its is used in a while loop for phase unwrapping
         iters = 0;
@@ -228,9 +234,8 @@ void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInf
             }
 
             //Merge the two groups by having last index of first group go to first index of second group
-            //Merge using multimaps?
-            currentFirst = groupArray[(currentRow)*numCols + currentCol].firstIndex;
-            currentLast = groupArray[(currentRow)*numCols + currentCol].lastIndex;
+            currentFirst = groupArray[get2Dindex(currentRow, currentCol, numCols)].firstIndex;
+            currentLast = groupArray[get2Dindex(currentRow, currentCol, numCols)].lastIndex;
 
 
             nextLast = groupArray[adjIndex].lastIndex;
