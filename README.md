@@ -5,7 +5,7 @@ To compile the 2D unwrapper only in Matlab, type
 mex phaseUnwrap2D.cpp
 
 To compile the 2D/3D unwrapper, use
-mex phaseUnwrap
+mex phaseUnwrap.cpp
 
 then for a given wrapped (double) phase image, type
 unwrapped = phaseUnwrap2D(wrapped); 
