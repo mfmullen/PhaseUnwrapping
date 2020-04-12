@@ -26,7 +26,7 @@ Example: unwrapped = phaseUnwrapC(wrapped);
 //======================================================================
 //                          BASIC FUNCTIONS HERE                        
 //======================================================================
-inline double M_PI = 4.0 * atan(1.0);
+const double M_PI = 4.0 * atan(1.0);
 
 using namespace std;
 
