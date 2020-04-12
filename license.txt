@@ -1,4 +1,4 @@
-Copyright (c) 2017, Michael Mullen
+Copyright (c) 2020, Michael Mullen
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
