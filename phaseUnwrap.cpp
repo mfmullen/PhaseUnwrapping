@@ -1,12 +1,12 @@
 /**************************************************************************
-INPUT: A 2D wrapped phase image
+INPUT: A 2D/3D wrapped phase image
 Example: unwrapped = phaseUnwrapC(wrapped);
 
  Michael Mullen
  mulle399@umn.edu
  Created in Matlab R2016a
  version 3.0 (Feb 2020)
- uses 2D-SRNCP
+ uses 3D-SRNCP version of 2D-SRNCP
  an algorithm by Miguel Arevallilo Herraez, David R. Burton, 
  Michael J. Lalor, and Munther A. Gdeisat in Applied Optics, Vol. 
  41, No. 35, pp. 7437, 2002.
@@ -73,7 +73,7 @@ struct pixelGroup {
     long int lastIndex;
 };
 
-//makes code a little clearer when grabbing indices.
+//makes code a little clearer when grabbing indices of adjacent voxels.
 inline long int get3Dindex(const long int row, const long int col, const long int page, 
     const long int numCols, const long int numRows) {
     return col + (row)*numCols + page*numCols*numRows;
@@ -136,7 +136,7 @@ void calcEdges(vector <pixelGroup>& groupArray, vector<edgeInfo>& edges, const l
 }
 
 //Reliability calculation
-//Calculated finite differences in phase across all non-border pixels
+//Calculates second differenc in phase across all non-border pixels
 //Includes diagonal phase differences
 void calcReliability(vector<double>& Reliability, const double* unwrappedImage, const int& numRows, 
     const int& numCols, const long int numPages) {
@@ -238,7 +238,7 @@ void calcUnwrap(double* unwrappedImage, const long int numGroups, vector<edgeInf
         currentRow = edges[sortedIndex].row;
         currentCol = edges[sortedIndex].column;
         currentPage = edges[sortedIndex].page;
-        //the weird condition on numPages only is so that it still enters the loop in 3D, 
+        //the weird condition on numPages only is so that it still enters the loop in 2D, 
         //when currentPage = 0 always
         if (currentRow < numRows - 1 && currentCol < numCols - 1 && (currentPage < numPages - 1 || currentPage == 0)) {
             currentGroup = groupArray[get3Dindex(currentRow, currentCol, currentPage, numCols, numRows)].group;
@@ -418,6 +418,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         numPages = 1; //used in multiplications later to determine size.
     }
 
+    //Setup output image size.
     plhs[0] = mxCreateNumericArray(ndims, dims, mxDOUBLE_CLASS, mxREAL);
     unwrappedImage = mxGetPr(plhs[0]);
     
