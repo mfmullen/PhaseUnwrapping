@@ -4,7 +4,7 @@ x = linspace(-5,5,64);
 image = image.* exp(1i * (xgrid.^2 + ygrid.^2));
 
 tic;
-unwrapped = phaseUnwrap2D(angle(image));
+unwrapped = phaseUnwrap(angle(image));
 toc;
 
 figure(11);
